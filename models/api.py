@@ -16,7 +16,15 @@ class DemucsServiceAPI(graphene.ObjectType):
         description="This function will trigger a song split based "
         "on received parameters",
         song=graphene.String(required=True),
-        model_path=graphene.String(),
+        model=graphene.String(),
+        device=graphene.String()
+    )
+
+    split_from_url = graphene.String(
+        description="This function will trigger a song split based "
+        "on a youtube video",
+        url=graphene.String(required=True),
+        model=graphene.String(),
         device=graphene.String()
     )
 
@@ -49,16 +57,16 @@ class DemucsServiceAPI(graphene.ObjectType):
         return 'World'
 
     def resolve_split(
-            self,
-            info,
-            song,
-            model_path="lib/demucs/models/demucs.th",
-            device='cpu'
+        self,
+        info,
+        song,
+        model="demucs",
+        device='cpu'
     ):
-        demucs_srv = DemucsService(model_path, device)
+        demucs_srv = DemucsService(model, device)
         # rather than having a long lasting request,
         # we should have a job created
-        print(f"running demucs with {model_path} and {device}")
+        print(f"running demucs with {model} and {device}")
         demucs_srv.split_song(song)
         print('demucs completed')
         return "Job <JOBID> has been created"
@@ -66,7 +74,7 @@ class DemucsServiceAPI(graphene.ObjectType):
     def resolve_music_from_video(self, info, url):
         try:
             filename = video_to_mp3(url)
-            return f"Video {filename} downloaded successfully"
+            return filename
         except Exception as e:
             return f"Something went wrong when downloading the video {e}"
 
@@ -81,3 +89,24 @@ class DemucsServiceAPI(graphene.ObjectType):
             return list_songs(f"separated/{model}")
         except Exception as e:
             return [f"Something went wrong, unable to return songs: {e}"]
+
+    def resolve_split_from_url(
+        self,
+        info,
+        url,
+        model="demucs",
+        device='cpu'
+    ):
+        try:
+            print(f"Received a split from url, trying to fetch video from Youtube {url} - {model} - {device}")
+            filename = video_to_mp3(url)
+            demucs_srv = DemucsService(model, device)
+            # rather than having a long lasting request,
+            # we should have a job created
+            print(f"running demucs with {model} and {device}")
+            demucs_srv.split_song(filename)
+            print('demucs completed')
+            return "Song has been separated succesfully!"
+
+        except Exception as e:
+            return f"Something went bananas {e}"

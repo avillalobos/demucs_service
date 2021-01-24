@@ -17,12 +17,12 @@ sys.modules['demucs'] = demucs
 
 class DemucsService():
 
-    def __init__(self, model_path, device):
+    def __init__(self, model, device):
         # This will require all the parameters to build and split the song.
 
         # Get from the arguments the model that we want to use,
         # by default demucs
-        self.model_path = model_path
+        self.model_path = f"lib/demucs/models/{model}.th"
 
         # Get the device that we want to use to split the song, by default cpu
         self.device = device  # it can be cuda if NVIDIA available
@@ -39,7 +39,7 @@ class DemucsService():
         self.model = load_model(self.model_path)
 
         # default location for the service
-        self.out = Path('separated/demucs')
+        self.out = Path(f'separated/{model}')
         self.out.mkdir(parents=True, exist_ok=True)
         # default tracks:
         self.source_names = ["drums", "bass", "other", "vocals"]

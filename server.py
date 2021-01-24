@@ -4,9 +4,11 @@ import graphene
 from flask import Flask
 from flask_graphql import GraphQLView
 from models.api import DemucsServiceAPI
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+CORS(app)
 schema = graphene.Schema(query=DemucsServiceAPI)
 
 
