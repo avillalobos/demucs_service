@@ -1,17 +1,16 @@
 #!/usr/bin/python3
 
-
+import base64
 import graphene
+import logging
+import lib.utils as utils
 
+from datetime import datetime
+from pathlib import Path
 from lib.demucs_service import DemucsService
-from lib.utils import (
-    video_to_mp3,
-    list_songs
-)
 
 
 class DemucsServiceAPI(graphene.ObjectType):
-    hello = graphene.String(description='A typical hello world')
     split = graphene.String(
         description="This function will trigger a song split based "
         "on received parameters",
@@ -52,10 +51,6 @@ class DemucsServiceAPI(graphene.ObjectType):
         url=graphene.String(required=True)
     )
 
-    def resolve_hello(self, info):
-        print("executing resolve")
-        return 'World'
-
     def resolve_split(
         self,
         info,
@@ -66,27 +61,27 @@ class DemucsServiceAPI(graphene.ObjectType):
         demucs_srv = DemucsService(model, device)
         # rather than having a long lasting request,
         # we should have a job created
-        print(f"running demucs with {model} and {device}")
+        logging.info(f"running demucs with {model} and {device}")
         demucs_srv.split_song(song)
-        print('demucs completed')
+        logging.info('demucs completed')
         return "Job <JOBID> has been created"
 
     def resolve_music_from_video(self, info, url):
         try:
-            filename = video_to_mp3(url)
+            filename = utils.video_to_mp3(url)
             return filename
         except Exception as e:
             return f"Something went wrong when downloading the video {e}"
 
     def resolve_list_songs(self, info):
         try:
-            return list_songs('songs')
+            return utils.list_songs('songs')
         except Exception as e:
             return f"Something went wrong when trying to list songs {e}"
 
     def resolve_list_separated_songs(self, info, model='demucs'):
         try:
-            return list_songs(f"separated/{model}")
+            return utils.list_songs(f"separated/{model}")
         except Exception as e:
             return [f"Something went wrong, unable to return songs: {e}"]
 
@@ -98,15 +93,26 @@ class DemucsServiceAPI(graphene.ObjectType):
         device='cpu'
     ):
         try:
-            print(f"Received a split from url, trying to fetch video from Youtube {url} - {model} - {device}")
-            filename = video_to_mp3(url)
+            logging.info(
+                f"Received a split from url, trying to fetch video \
+                from Youtube {url} - {model} - {device}"
+            )
+            filename = utils.video_to_mp3(url)
             demucs_srv = DemucsService(model, device)
             # rather than having a long lasting request,
             # we should have a job created
-            print(f"running demucs with {model} and {device}")
+            logging.info(f"running demucs with {model} and {device}")
             demucs_srv.split_song(filename)
-            print('demucs completed')
-            return "Song has been separated succesfully!"
+            logging.info('demucs completed')
+            # filename is the full path to the downloaded song,
+            # we only need the basename for the song
+            download = utils.zip_files(model, Path(filename).stem)
+            download_url = base64.standard_b64encode(
+                str(datetime.today()).encode()
+            )
+            utils.create_new_download(str(download), download_url.decode())
+            return f"Song has been separated succesfully!, \
+                url generated: www.demucs.com/download/{download_url.decode()}"
 
         except Exception as e:
             return f"Something went bananas {e}"

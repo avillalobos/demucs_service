@@ -130,3 +130,4 @@ dmypy.json
 .vscode
 songs/*
 separated/*
+models/database.db
