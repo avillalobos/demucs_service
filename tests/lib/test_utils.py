@@ -164,6 +164,9 @@ values (?, ?, False)"""
             default_context_manager=True
         )
         fake_zipfile_manager.write = lambda x, arcname: True
+        self.mock_callable(
+            fake_zipfile_manager, 'write'
+        ).to_return_value(None).and_assert_called_exactly(4)
         self.mock_constructor(
             zipfile, "ZipFile"
         ).for_call(
