@@ -4,6 +4,7 @@ import base64
 import graphene
 import logging
 import lib.utils as utils
+from typing import Optional
 
 from datetime import datetime
 from pathlib import Path
@@ -98,6 +99,8 @@ class DemucsServiceAPI(graphene.ObjectType):
                 from Youtube {url} - {model} - {device}"
             )
             filename = utils.video_to_mp3(url)
+            if not filename:
+                raise Exception("Failed to convert video to mp4")
             demucs_srv = DemucsService(model, device)
             # rather than having a long lasting request,
             # we should have a job created
@@ -110,7 +113,12 @@ class DemucsServiceAPI(graphene.ObjectType):
             download_url = base64.standard_b64encode(
                 str(datetime.today()).encode()
             )
-            utils.create_new_download(str(download), download_url.decode())
+            try:
+                utils.create_new_download(str(download), download_url.decode())
+            except FileNotFoundError:
+                return "File successfully separated but download not created"
+            except Exception as e:
+                return f"Something went wrong: {e}"
             return f"Song has been separated succesfully!, \
                 url generated: www.demucs.com/download/{download_url.decode()}"
 
