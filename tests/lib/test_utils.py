@@ -123,14 +123,11 @@ values (?, ?, False)"""
                 self.fake_youtube_song_mp3
             )
 
-    def _fake_raise_exception(self, filename):
-        raise IOError(f"We won't work on this file: {filename}")
-
     @patch('moviepy.editor.VideoFileClip', autospec=True)
     def test_mp4_to_mp3_failure(self, fake_video_file_clip):
         # coldn't use StrictMock because __new__ is not supported and
         # it was constantly failing when mocking VideoFileClip
-        fake_video_file_clip.side_effect = self._fake_raise_exception
+        fake_video_file_clip.side_effect = IOError("Boom!")
         self.assertIsNone(
             utils.mp4_to_mp3(self.fake_youtube_song_name)
         )
