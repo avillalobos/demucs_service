@@ -4,8 +4,6 @@ import base64
 import graphene
 import logging
 import lib.utils as utils
-from typing import Optional
-
 from datetime import datetime
 from pathlib import Path
 from lib.demucs_service import DemucsService
