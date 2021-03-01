@@ -126,8 +126,7 @@ def get_download_file(download_url: str) -> Optional[Path]:
         logging.debug(f"Attempting to retrieve file: {download_url}")
         result = db_execute(
             """
-"SELECT song_path \
-FROM downloads \
+SELECT song_path FROM downloads
 WHERE download_url=? AND accessed=False""",
             (download_url,)
         )
