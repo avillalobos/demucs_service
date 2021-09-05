@@ -44,7 +44,7 @@ pyOpenSSL
 pyparsing==2.4.7
 PySocks
 python-dateutil==2.8.1
-pytube==10.4.1
+pytube>=11
 pytz==2020.5
 requests
 Rx 
