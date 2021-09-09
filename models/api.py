@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 
-import base64
+from typing import Optional
 import graphene
 import logging
 import lib.utils as utils
-from datetime import datetime
-from pathlib import Path
 from lib.demucs_service import DemucsService
 
 
@@ -15,7 +13,9 @@ class DemucsServiceAPI(graphene.ObjectType):
         "on received parameters",
         song=graphene.String(required=True),
         model=graphene.String(),
-        device=graphene.String()
+        device=graphene.String(),
+        start_time=graphene.String(),
+        end_time=graphene.String()
     )
 
     split_from_url = graphene.String(
@@ -23,7 +23,9 @@ class DemucsServiceAPI(graphene.ObjectType):
         "on a youtube video",
         url=graphene.String(required=True),
         model=graphene.String(),
-        device=graphene.String()
+        device=graphene.String(),
+        start_time=graphene.String(),
+        end_time=graphene.String()
     )
 
     list_songs = graphene.List(
@@ -53,17 +55,26 @@ class DemucsServiceAPI(graphene.ObjectType):
     def resolve_split(
         self,
         info,
-        song,
-        model="demucs",
-        device='cpu'
+        song: str,
+        model: str = "demucs",
+        device: str = 'cpu',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None
     ):
         demucs_srv = DemucsService(model, device)
         # rather than having a long lasting request,
         # we should have a job created
         logging.info(f"running demucs with {model} and {device}")
-        demucs_srv.split_song(song)
+        final_song_name = song
+        if start_time and end_time:
+            final_song_name = utils.trim_song(song, start_time, end_time)
+        demucs_srv.split_song(final_song_name)
         logging.info('demucs completed')
-        return "Job <JOBID> has been created"
+        return (
+            "Song has been separated succesfully!"
+            " url generated: www.demucs.com/download/"
+            f"{utils.get_download_link(final_song_name, model)}"
+        )
 
     def resolve_music_from_video(self, info, url):
         try:
@@ -87,9 +98,11 @@ class DemucsServiceAPI(graphene.ObjectType):
     def resolve_split_from_url(
         self,
         info,
-        url,
-        model="demucs",
-        device='cpu'
+        url: str,
+        model: str = "demucs",
+        device: str = 'cpu',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None
     ):
         try:
             logging.info(
@@ -103,22 +116,25 @@ class DemucsServiceAPI(graphene.ObjectType):
             # rather than having a long lasting request,
             # we should have a job created
             logging.info(f"running demucs with {model} and {device}")
-            demucs_srv.split_song(filename)
+            final_song_name = filename
+            if start_time and end_time:
+                final_song_name = utils.trim_song(
+                    filename,
+                    start_time,
+                    end_time
+                )
+            demucs_srv.split_song(final_song_name)
             logging.info('demucs completed')
             # filename is the full path to the downloaded song,
             # we only need the basename for the song
-            download = utils.zip_files(model, Path(filename).stem)
-            download_url = base64.standard_b64encode(
-                str(datetime.today()).encode()
-            )
             try:
-                utils.create_new_download(str(download), download_url.decode())
-            except FileNotFoundError:
-                return "File successfully separated but download not created"
+                return (
+                    "Song has been separated succesfully!"
+                    " url generated: www.demucs.com/download/"
+                    f"{utils.get_download_link(final_song_name, model)}"
+                )
             except Exception as e:
                 return f"Something went wrong: {e}"
-            return f"Song has been separated succesfully!, \
-                url generated: www.demucs.com/download/{download_url.decode()}"
 
         except Exception as e:
             return f"Something went bananas {e}"

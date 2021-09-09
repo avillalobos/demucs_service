@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import base64
+import datetime
 import logging
 import os
 from typing import Optional
@@ -8,6 +10,7 @@ import sqlite3
 import pytube
 import moviepy.editor
 import zipfile
+import pydub
 
 DOWNLOAD_DB = Path("models/database.db")
 
@@ -156,3 +159,39 @@ def remove_download_file(download_path: Path) -> None:
             f"There was a problem removing file: {download_path} - {e}"
         )
         raise
+
+
+def trim_song(song_path: str, start_time: str, end_time: str) -> Optional[str]:
+    track = Path(song_path)
+    try:
+        start_time_obj = datetime.time.fromisoformat(start_time)
+        end_time_obj = datetime.time.fromisoformat(end_time)
+        start_time_ms = start_time_obj.hour * 3600 * 1000 + \
+            start_time_obj.minute * 60 * 1000 + \
+            start_time_obj.second * 1000 + \
+            start_time_obj.microsecond/1000
+        end_time_ms = end_time_obj.hour * 3600 * 1000 + \
+            end_time_obj.minute * 60 * 1000 + \
+            end_time_obj.second * 1000 + \
+            end_time_obj.microsecond/1000
+        # TODO(avillalobos) make sure these are within range, there will be an
+        # exception I'm sure but we should be defensive here.
+        song = pydub.AudioSegment.from_mp3(track.absolute())
+        extract = song[start_time_ms:end_time_ms]
+        extra_filename = Path(track.parent / Path(track.stem+'-extract.mp3'))
+        extract.export(extra_filename, format="mp3")
+        return track.parent / Path(track.stem+'-extract.mp3')
+    except Exception as e:
+        raise f"There was a problem casting start or end time {e}"
+
+
+def get_download_link(filename: str, model: str) -> str:
+    download = zip_files(model, Path(filename).stem)
+    download_url = base64.standard_b64encode(
+        str(datetime.datetime.today()).encode()
+    )
+    try:
+        create_new_download(str(download), download_url.decode())
+    except FileNotFoundError:
+        return "File successfully separated but download not created"
+    return download_url.decode()
